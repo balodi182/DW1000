@@ -129,6 +129,18 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
 
+	  /* Example: Send a UWB frame */
+	  uint8_t frame_data[] = {0x41, 0x88, 0x00, 0xCA, 0xDE, 0xAD, 0xBE, 0xEF};
+
+	  /* Configure for standard transmission */
+	  if (DW_EnableTxMode(DW_TX_MODE_STANDARD) != HAL_OK) {
+
+	  }
+
+	  /* Disable TX when done */
+	  DW_DisableTxMode();
+	  HAL_Delay(100);
+
   }
   /* USER CODE END 3 */
 }

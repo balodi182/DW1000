@@ -63,6 +63,14 @@ typedef enum {
     DW_REG_READ_WRITE_DOUBLE
 } DW_RegAccessType;
 
+/* Transmission Mode Configuration */
+typedef enum {
+    DW_TX_MODE_STANDARD,
+    DW_TX_MODE_DELAYED,
+    DW_TX_MODE_RESPONSE
+} DW_TxMode_t;
+
+
 /* Register Definition Structure */
 typedef struct {
     uint8_t address;
@@ -159,6 +167,20 @@ static const DW_RegisterDef DW_Registers[] = {
 #define DW_CHAN_CTRL_TX_PRF_64MHZ     0x00000200
 #define DW_CHAN_CTRL_PHY_MODE_MASK    0x00000C00
 
+
+/* SYS_CTRL Register Bit Definitions */
+#define SYS_CTRL_TXEN      (0x00000001)  // Transmitter enable
+#define SYS_CTRL_RXEN      (0x00000002)  // Receiver enable
+#define SYS_CTRL_TXSTRT    (0x00000004)  // Start transmission
+#define SYS_CTRL_TRXOFF    (0x00000040)  // Transceiver off
+#define SYS_CTRL_TXDLYE    (0x00000020)  // Delayed transmit enable
+#define SYS_CTRL_RXDLYE    (0x00000080)  // Delayed receive enable
+
+/* Channel Control Options */
+#define DW_CHAN_CTRL_TX_CHAN_5  (0x00000001)  // Channel 5 (default)
+#define DW_CHAN_CTRL_TX_PRF_64MHZ (0x00000200) // 64 MHz PRF
+
+
 /* System Configuration Register Bit Definitions */
 #define DW_SYS_CFG_RXAUTR              0x00000001
 #define DW_SYS_CFG_AUTOACK             0x00000002
@@ -175,5 +197,9 @@ uint32_t DW_ReadEUI(uint8_t* eui);
 HAL_StatusTypeDef DW_ReadAllRegisters(DW1000_Registers_t *regs);
 HAL_StatusTypeDef DW_WriteAndVerifyEUI(uint8_t* eui);
 bool DW_CompareEUI(uint8_t* eui1, uint8_t* eui2);
+HAL_StatusTypeDef DW_EnableTxMode(DW_TxMode_t mode);
+HAL_StatusTypeDef DW_DisableTxMode(void);
+HAL_StatusTypeDef DW_SendFrame(uint8_t* frame_data, uint16_t length);
+
 
 #endif /* INC_DWM1000_H_ */

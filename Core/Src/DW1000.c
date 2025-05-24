@@ -207,4 +207,122 @@ bool DW_CompareEUI(uint8_t* eui1, uint8_t* eui2)
     return true;
 }
 
+/**
+  * @brief  Configures DW1000 for transmission
+  * @param  mode: Transmission mode (standard/delayed/response)
+  * @retval HAL_OK if successful, HAL_ERROR on failure
+  */
+HAL_StatusTypeDef DW_EnableTxMode(DW_TxMode_t mode)
+{
+    /* 1. Configure System Control Register (SYS_CTRL) */
+    uint32_t sys_ctrl = 0;
+
+    /* Read current SYS_CTRL */
+    if (DW_ReadReg(DW_REG_SYS_CTRL, (uint8_t*)&sys_ctrl, 4) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    /* Set TX mode bits (clear RX bits) */
+    sys_ctrl &= ~(SYS_CTRL_RXEN | SYS_CTRL_RXDLYE);  // Disable RX
+    sys_ctrl |= SYS_CTRL_TXEN;                       // Enable TX
+
+    /* Mode-specific configurations */
+    switch(mode) {
+        case DW_TX_MODE_DELAYED:
+            sys_ctrl |= SYS_CTRL_TXDLYE;  // Enable delayed TX
+            break;
+        case DW_TX_MODE_RESPONSE:
+            sys_ctrl |= SYS_CTRL_TRXOFF;  // Disable transceiver
+            // Additional response mode config
+            break;
+        default: // Standard mode
+            break;
+    }
+
+    /* Write back SYS_CTRL */
+    if (DW_WriteReg(DW_REG_SYS_CTRL, (uint8_t*)&sys_ctrl, 4) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    /* 2. Configure Frame Control Register (TX_FCTRL) */
+    uint8_t tx_fctrl[5] = {0};
+    tx_fctrl[0] = 0x00;  // Standard frame control
+    tx_fctrl[1] = 0x00;  // Frame length will be set during send
+
+    if (DW_WriteReg(DW_REG_TX_FCTRL, tx_fctrl, 5) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    /* 3. Configure Channel and TX Power */
+    uint32_t chan_ctrl = DW_CHAN_CTRL_TX_CHAN_5 | DW_CHAN_CTRL_TX_PRF_64MHZ;
+    if (DW_WriteReg(DW_REG_CHAN_CTRL, (uint8_t*)&chan_ctrl, 4) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    uint8_t tx_power[4] = {0x1F, 0x1F, 0x1F, 0x1F}; // Max power
+    if (DW_WriteReg(DW_REG_TX_POWER, tx_power, 4) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    return HAL_OK;
+}
+
+/**
+  * @brief  Disables transmission mode
+  * @retval HAL_OK if successful, HAL_ERROR on failure
+  */
+HAL_StatusTypeDef DW_DisableTxMode(void)
+{
+    uint32_t sys_ctrl = 0;
+
+    if (DW_ReadReg(DW_REG_SYS_CTRL, (uint8_t*)&sys_ctrl, 4) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    sys_ctrl &= ~(SYS_CTRL_TXEN | SYS_CTRL_TXDLYE);  // Clear TX bits
+
+    return DW_WriteReg(DW_REG_SYS_CTRL, (uint8_t*)&sys_ctrl, 4);
+}
+
+/**
+  * @brief  Transmits a data frame
+  * @param  frame_data: Pointer to frame data
+  * @param  length: Length of frame (up to 1024 bytes)
+  * @retval HAL_OK if successful, HAL_ERROR on failure
+  */
+HAL_StatusTypeDef DW_SendFrame(uint8_t* frame_data, uint16_t length)
+{
+    /* 1. Validate parameters */
+    if (!frame_data || length == 0 || length > 1024) {
+        return HAL_ERROR;
+    }
+
+    /* 2. Set frame length in TX_FCTRL */
+    uint8_t tx_fctrl[5];
+    if (DW_ReadReg(DW_REG_TX_FCTRL, tx_fctrl, 5) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    tx_fctrl[0] = (length & 0xFF);        // LSB of length
+    tx_fctrl[1] = ((length >> 8) & 0x03); // 2 MSBs of length (max 1024)
+
+    if (DW_WriteReg(DW_REG_TX_FCTRL, tx_fctrl, 5) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    /* 3. Write frame to TX buffer */
+    if (DW_WriteReg(DW_REG_TX_BUFFER, frame_data, length) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    /* 4. Trigger transmission */
+    uint32_t sys_ctrl = 0;
+    if (DW_ReadReg(DW_REG_SYS_CTRL, (uint8_t*)&sys_ctrl, 4) != HAL_OK) {
+        return HAL_ERROR;
+    }
+
+    sys_ctrl |= SYS_CTRL_TXSTRT;  // Set TX start bit
+
+    return DW_WriteReg(DW_REG_SYS_CTRL, (uint8_t*)&sys_ctrl, 4);
+}
 

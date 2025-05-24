@@ -7,3 +7,6 @@
 ../Core/Src/DW1000.c:132:19:DW_ReadAllRegisters	16	static
 ../Core/Src/DW1000.c:172:19:DW_WriteAndVerifyEUI	24	static
 ../Core/Src/DW1000.c:200:6:DW_CompareEUI	24	static
+../Core/Src/DW1000.c:215:19:DW_EnableTxMode	40	static
+../Core/Src/DW1000.c:274:19:DW_DisableTxMode	16	static
+../Core/Src/DW1000.c:293:19:DW_SendFrame	32	static
